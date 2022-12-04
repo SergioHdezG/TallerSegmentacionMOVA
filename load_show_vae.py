@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+import random
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input
@@ -14,6 +15,19 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Esta función reordena la clases de la máscara para visualizar mejor los datos
+
+def reorder_visulization(img_label):
+    mask_aux = np.copy(img_label[:, :, 0])
+    img_label[:, :, 0] = img_label[:, :, 1]
+    img_label[:, :, 1] = img_label[:, :, 3]
+    mask_aux2 = np.copy(img_label[:, :, 2])
+    img_label[:, :, 2] = img_label[:, :, 4]
+    img_label[:, :, 3] = img_label[:, :, 5]
+    img_label[:, :, 4] = img_label[:, :, 6]
+    img_label[:, :, 5] = mask_aux2
+    img_label[:, :, 6] = mask_aux
+    return img_label
 
 #
 data_path = "cityscapes"
@@ -35,10 +49,8 @@ print(y[:5])
 
 # Cargamos los datos de entrenamiento en un numpy array.
 
-# In[5]:
-
-# x = x[:500]
-# y = y[:500]
+x = x[:100]
+y = y[:100]
 x_train = [np.load(os.path.join(data_path, "train_images_npy", name)) for name in x]
 y_train = [np.load(os.path.join(data_path, "train_masks_npy", name)) for name in y]
 print('Training size: ', len(x))
@@ -138,8 +150,8 @@ def encoder(latent_dim, input_shape):
                strides=2,
                padding='same')(x)
 
-    # Necesitamos la información de las dimensiones de la salida de la última 
-    # capa convolucional para poder reconstruir la imagen al tamaño correcto en 
+    # Necesitamos la información de las dimensiones de la salida de la última
+    # capa convolucional para poder reconstruir la imagen al tamaño correcto en
     # el decodificador
     last_conv_shape = K.int_shape(x)
 
@@ -214,6 +226,7 @@ def decoder(latent_dim, last_conv_shape, out_channels):
                           name='decoder_output')(x)  # Activación sigmoide para que las salidas estén en rango [0, 1]
 
 
+
     # instantiate decoder model
     decoder = tf.keras.models.Model(latent_input, output, name='decoder')
     decoder.summary()
@@ -232,9 +245,6 @@ class VAE(keras.Model):
         self.encoder = encoder
         self.decoder = decoder
         self.beta = beta  # Factor de importancia de la regulación (beta-VAE)
-
-        self.acc = tf.keras.metrics.CategoricalAccuracy(name="acc")
-        self.val_acc = tf.keras.metrics.CategoricalAccuracy(name="val_acc")
 
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
@@ -256,7 +266,6 @@ class VAE(keras.Model):
             self.total_loss_tracker,
             self.reconstruction_loss_tracker,
             self.kl_loss_tracker,
-            self.acc,
             self.val_total_loss_tracker,
             self.val_reconstruction_loss_tracker,
             self.val_kl_loss_tracker,
@@ -280,13 +289,10 @@ class VAE(keras.Model):
         self.total_loss_tracker.update_state(total_loss)
         self.reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.kl_loss_tracker.update_state(beta*kl_loss)
-        self.acc.update_state(y, reconstruction)
-
         return {
             "loss": self.total_loss_tracker.result(),
             "reconstruction_loss": self.reconstruction_loss_tracker.result(),
             "beta*kl_loss": self.kl_loss_tracker.result(),
-            "acc": self.acc.result()
         }
 
     def test_step(self, data):
@@ -309,14 +315,13 @@ class VAE(keras.Model):
         self.val_total_loss_tracker.update_state(total_loss)
         self.val_reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.val_kl_loss_tracker.update_state(beta*kl_loss)
-        self.val_acc.update_state(y, reconstruction)
+
         # Return a dict mapping metric names to current value.
         # Note that it will include the loss (tracked in self.metrics).
         return {
             "loss": self.val_total_loss_tracker.result(),
             "reconstruction_loss": self.val_reconstruction_loss_tracker.result(),
             "beta*kl_loss": self.val_kl_loss_tracker.result(),
-            "val_acc": self.val_acc.result()
         }
 
     def call(self, inputs):
@@ -346,72 +351,125 @@ def vae_loss_func(reconstruction_loss, z_log_var, z_mean, beta=0.5):
     return vae_loss, kl_loss
 
 input_shape = (256, 512, 3)
-out_channels = 7
+out_channels= 7
 latent_dim = 2048
-beta = 10
+beta = 1000
 
 encoder, last_conv_shape = encoder(latent_dim, input_shape)
 decoder = decoder(latent_dim, last_conv_shape, out_channels)
+
+# vae.compile(optimizer=keras.optimizers.Adam(lr=1e-4))
+
+batch_size = 64
+# epochs = 50
+
+# vae.fit(x_train, y_train,
+#        epochs=epochs,
+#        batch_size=batch_size,
+#        shuffle=True,
+#        validation_data=(x_val, y_val))
+encoder_path = '/media/archivos/home/PycharmProjects2022/TallerSegmentacion/checkpoints/taller_encoder/weights.h5'
+decoder_path = '/media/archivos/home/PycharmProjects2022/TallerSegmentacion/checkpoints/taller_decoder/weights.h5'
+vae_path = '/media/archivos/home/PycharmProjects2022/TallerSegmentacion/checkpoints/taller_vae/weights.h5'
+# # Si no se hubiese creado el modelo todavía habria que crear uno nuevo con la siguiente linea
+# # encoder, decoder, vae = build_model(input_shape, out_channels, latent_dim)
+
+# # load weights into new model
+encoder.load_weights(encoder_path)
+
+# # load weights into new model
+decoder.load_weights(decoder_path)
+
+# # Si fuesemos a reentrenar necesitariamos compilamos el modelo de nuevo
 vae = VAE(encoder, decoder, beta)
+vae.compile()
 
-vae.compile(optimizer=keras.optimizers.Adam(lr=1e-4))
-
-batch_size = 32
-epochs = 100
-
-vae.fit(x_train, y_train,
-        epochs=epochs,
-        batch_size=batch_size,
-        shuffle=True,
-        validation_data=(x_val, y_val))
-
-
-# Salvamos el modelo. En este caso, es necesario guardar el Codificador y Decodificador por separado por dos motivos:
-# 
-# 
-# 1.   Nos puede interesar utilizar en el futuro usar solo una de las dos partes independientemente.
-# 2.   La unión entre los dos es un poco especial ya que pasan tres tensores de uno a otro y hemos tenido que hacerlo de forma no "estandar". En este caso Keras da problemas al guardar el modelo completo de VAE.
-# 
-# Solo guardamos los pesos debido a que ya tenemos el modelo completo definido en el notebook.
-# 
-# 
-
-# In[22]:
-
-base_path = 'checkpoints'
-
-encoder_path = 'taller_encoder/weights.h5'
-decoder_path = 'taller_decoder/weights.h5'
-vae_path = 'taller_vae/weights.h5'
-
-if not os.path.exists(base_path):
-    os.mkdir(base_path)
-if not os.path.exists(os.path.join(base_path, 'taller_encoder')):
-    os.mkdir(os.path.join(base_path, 'taller_encoder'))
-if not os.path.exists(os.path.join(base_path, 'taller_decoder')):
-    os.mkdir(os.path.join(base_path, 'taller_decoder'))
-if not os.path.exists(os.path.join(base_path, 'taller_vae')):
-    os.mkdir(os.path.join(base_path, 'taller_vae'))
-
-encoder.save_weights(os.path.join(base_path, encoder_path))
-print("Encoder saved  to disk")
-decoder.save_weights(os.path.join(base_path, decoder_path))
-print("Decoder saved  to disk")
-vae.save_weights(os.path.join(base_path, vae_path))
-
-encoder_path = 'taller_encoder/weights.tf'
-decoder_path = 'taller_decoder/weights.tf'
-vae_path = 'taller_vae/weights.tf'
-encoder.save_weights(os.path.join(base_path, encoder_path))
-print("Encoder saved  to disk")
-
-decoder.save_weights(os.path.join(base_path, decoder_path))
-print("Decoder saved  to disk")
-
-vae.save_weights(os.path.join(base_path, vae_path))
 # # Testing
-
 vae.evaluate(x_test, y_test, batch_size=batch_size)
+
+figsize = 5
+num_examples_to_generate = figsize*figsize
+fig = plt.figure()
+fig.suptitle('Resultados segmentación')
+examples_index = np.random.choice(x_test.shape[0], figsize*2)
+examples = x_test[examples_index]
+z_mean, z_log_var, z = encoder.predict(examples)
+predictions = decoder.predict(z)
+
+
+plt.figure(figsize=(20, 10))
+for i in range(figsize*2):
+    img_label = reorder_visulization(predictions[i])
+    preds = np.argmax(img_label, axis=-1) / 6.
+    plt.subplot(4, figsize, i+1)
+    plt.imshow(examples[i])
+    plt.subplot(4, figsize, i + 1 + figsize*2)
+    plt.imshow(preds)
+
+plt.axis('off')
+plt.show()
+
+rnd = random.randint(0, predictions.shape[0]-1)
+img_label = reorder_visulization(predictions[rnd])
+
+plt.figure(figsize=(15, 15))
+ax = plt.subplot(4, 3, 1)
+ax.set_title("imagen")
+plt.imshow(examples[rnd])
+
+
+# Mostramos cada máscara por separado
+ax = plt.subplot(4, 3, 2)
+ax.set_title("vehículo")
+plt.imshow(img_label[:, :, 0])
+
+ax = plt.subplot(4, 3, 3)
+ax.set_title("persona")
+plt.imshow(img_label[:, :, 1])
+
+ax = plt.subplot(4, 3, 4)
+ax.set_title("edificios")
+plt.imshow(img_label[:, :, 2])
+
+ax = plt.subplot(4, 3, 5)
+ax.set_title("vegetación")
+plt.imshow(img_label[:, :, 3])
+
+ax = plt.subplot(4, 3, 6)
+ax.set_title("cielo")
+plt.imshow(img_label[:, :, 4])
+
+ax = plt.subplot(4, 3, 7)
+ax.set_title("suelo")
+plt.imshow(img_label[:, :, 5])
+
+ax = plt.subplot(4, 3, 8)
+ax.set_title("fondo")
+plt.imshow(img_label[:, :, 6])
+
+# Generamos una imágen con todas las máscaras
+img_all_label = np.argmax(img_label, axis=-1) / 6.
+
+ax = plt.subplot(4, 3, 9)
+ax.set_title("mapa segmentación")
+plt.imshow(img_all_label)
+
+plt.show()
+
+random_vector_for_generation = np.random.normal(size=(num_examples_to_generate, latent_dim))
+
+predictions = decoder.predict(random_vector_for_generation)
+
+fig = plt.figure(figsize=(20, 10))
+fig.suptitle('Nuevos ejemplos generados')
+for i in range(num_examples_to_generate):
+    img_label = reorder_visulization(predictions[i])
+    preds = np.argmax(img_label, axis=-1) / 6.
+    plt.subplot(figsize, figsize, i+1)
+    plt.imshow(preds)
+plt.axis('off')
+plt.show()
+
 
 
 
