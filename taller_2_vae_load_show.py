@@ -17,17 +17,7 @@ import matplotlib.pyplot as plt
 
 # Esta función reordena la clases de la máscara para visualizar mejor los datos
 
-def reorder_visulization(img_label):
-    mask_aux = np.copy(img_label[:, :, 0])
-    img_label[:, :, 0] = img_label[:, :, 1]
-    img_label[:, :, 1] = img_label[:, :, 3]
-    mask_aux2 = np.copy(img_label[:, :, 2])
-    img_label[:, :, 2] = img_label[:, :, 4]
-    img_label[:, :, 3] = img_label[:, :, 5]
-    img_label[:, :, 4] = img_label[:, :, 6]
-    img_label[:, :, 5] = mask_aux2
-    img_label[:, :, 6] = mask_aux
-    return img_label
+labels = ["persona", "vegetación", "cielo", "suelo", "fondo", "edificios", "vehiculo"]
 
 #
 data_path = "cityscapes"
@@ -398,8 +388,7 @@ predictions = decoder.predict(z)
 
 
 for i in range(figsize*2):
-    img_label = reorder_visulization(predictions[i])
-    preds = np.argmax(img_label, axis=-1) / 6.
+    preds = np.argmax(predictions[i], axis=-1) / 6.
     plt.subplot(4, figsize, i+1)
     plt.imshow(examples[i])
     plt.subplot(4, figsize, i + 1 + figsize*2)
@@ -409,8 +398,6 @@ plt.axis('off')
 plt.show()
 
 rnd = random.randint(0, predictions.shape[0]-1)
-img_label = reorder_visulization(predictions[rnd])
-
 plt.figure(figsize=(15, 15))
 ax = plt.subplot(4, 3, 1)
 ax.set_title("imagen")
@@ -419,35 +406,35 @@ plt.imshow(examples[rnd])
 
 # Mostramos cada máscara por separado
 ax = plt.subplot(4, 3, 2)
-ax.set_title("vehículo")
-plt.imshow(img_label[:, :, 0])
+ax.set_title(labels[0])
+plt.imshow(predictions[rnd][:, :, 0])
 
 ax = plt.subplot(4, 3, 3)
-ax.set_title("persona")
-plt.imshow(img_label[:, :, 1])
+ax.set_title(labels[1])
+plt.imshow(predictions[rnd][:, :, 1])
 
 ax = plt.subplot(4, 3, 4)
-ax.set_title("edificios")
-plt.imshow(img_label[:, :, 2])
+ax.set_title(labels[2])
+plt.imshow(predictions[rnd][:, :, 2])
 
 ax = plt.subplot(4, 3, 5)
-ax.set_title("vegetación")
-plt.imshow(img_label[:, :, 3])
+ax.set_title(labels[3])
+plt.imshow(predictions[rnd][:, :, 3])
 
 ax = plt.subplot(4, 3, 6)
-ax.set_title("cielo")
-plt.imshow(img_label[:, :, 4])
+ax.set_title(labels[4])
+plt.imshow(predictions[rnd][:, :, 4])
 
 ax = plt.subplot(4, 3, 7)
-ax.set_title("suelo")
-plt.imshow(img_label[:, :, 5])
+ax.set_title(labels[5])
+plt.imshow(predictions[rnd][:, :, 5])
 
 ax = plt.subplot(4, 3, 8)
-ax.set_title("fondo")
-plt.imshow(img_label[:, :, 6])
+ax.set_title(labels[6])
+plt.imshow(predictions[rnd][:, :, 6])
 
 # Generamos una imágen con todas las máscaras
-img_all_label = np.argmax(img_label, axis=-1) / 6.
+img_all_label = np.argmax(predictions[rnd], axis=-1) / 6.
 
 ax = plt.subplot(4, 3, 9)
 ax.set_title("mapa segmentación")
@@ -464,15 +451,92 @@ fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Nuevos ejemplos generados')
 
 for i in range(num_examples_to_generate):
-    img_label = reorder_visulization(predictions[i])
-    preds = np.argmax(img_label, axis=-1) / 6.
-    plt.subplot(figsize, figsize, i+1)
+    preds = np.argmax(predictions[i], axis=-1) / 6.
+    plt.subplot(figsize, figsize, i + 1)
     plt.imshow(preds)
 plt.colorbar()
 plt.axis('off')
 plt.show()
 
+fig = plt.figure(figsize=(20, 10))
+fig.suptitle('Huella latente de nuevos ejemplos generados')
+lin_space = [n for n in range(latent_dim)]
+for i in range(num_examples_to_generate):
+    latent_data = random_vector_for_generation[i]
+    plt.subplot(figsize, figsize, i + 1)
+    plt.bar(lin_space, latent_data)
 
+plt.axis('off')
+plt.show()
+
+
+
+fig = plt.figure(figsize=(10, 5))
+fig.suptitle('Leyenda')
+
+# Mostramos cada máscara por separado
+ax = plt.subplot(4, 3, 1)
+ax.set_title(labels[0])
+legend = np.ones((50, 50))*0./6.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+ax = plt.subplot(4, 3, 2)
+ax.set_title(labels[1])
+legend = np.ones((50, 50))*1./6.
+legend[-1, -2] = 0.
+legend[-1, -1] = 1.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+ax = plt.subplot(4, 3, 3)
+ax.set_title(labels[2])
+legend = np.ones((50, 50))*2./6.
+legend[-1, -2] = 0.
+legend[-1, -1] = 1.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+ax = plt.subplot(4, 3, 4)
+ax.set_title(labels[3])
+legend = np.ones((50, 50))*3./6.
+legend[-1, -2] = 0.
+legend[-1, -1] = 1.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+ax = plt.subplot(4, 3, 5)
+ax.set_title(labels[4])
+legend = np.ones((50, 50))*4./6.
+legend[:, -2] = 0.
+legend[:, -1] = 1.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+ax = plt.subplot(4, 3, 6)
+ax.set_title(labels[5])
+legend = np.ones((50, 50))*5./6.
+legend[-1, -2] = 0.
+legend[-1, -1] = 1.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+ax = plt.subplot(4, 3, 7)
+ax.set_title(labels[6])
+legend = np.ones((50, 50))*6./6.
+legend[-1, -2] = 0.
+legend[-1, -1] = 1.
+for i in range(7):
+    legend[:10, -i+1] = i/6.
+plt.imshow(legend)
+
+plt.show()
 
 
 
