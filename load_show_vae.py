@@ -389,7 +389,7 @@ vae.evaluate(x_test, y_test, batch_size=batch_size)
 
 figsize = 5
 num_examples_to_generate = figsize*figsize
-fig = plt.figure()
+fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Resultados segmentación')
 examples_index = np.random.choice(x_test.shape[0], figsize*2)
 examples = x_test[examples_index]
@@ -397,7 +397,6 @@ z_mean, z_log_var, z = encoder.predict(examples)
 predictions = decoder.predict(z)
 
 
-plt.figure(figsize=(20, 10))
 for i in range(figsize*2):
     img_label = reorder_visulization(predictions[i])
     preds = np.argmax(img_label, axis=-1) / 6.
@@ -405,7 +404,7 @@ for i in range(figsize*2):
     plt.imshow(examples[i])
     plt.subplot(4, figsize, i + 1 + figsize*2)
     plt.imshow(preds)
-
+plt.colorbar()
 plt.axis('off')
 plt.show()
 
@@ -453,6 +452,7 @@ img_all_label = np.argmax(img_label, axis=-1) / 6.
 ax = plt.subplot(4, 3, 9)
 ax.set_title("mapa segmentación")
 plt.imshow(img_all_label)
+plt.colorbar()
 
 plt.show()
 
@@ -462,11 +462,13 @@ predictions = decoder.predict(random_vector_for_generation)
 
 fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Nuevos ejemplos generados')
+
 for i in range(num_examples_to_generate):
     img_label = reorder_visulization(predictions[i])
     preds = np.argmax(img_label, axis=-1) / 6.
     plt.subplot(figsize, figsize, i+1)
     plt.imshow(preds)
+plt.colorbar()
 plt.axis('off')
 plt.show()
 
