@@ -17,7 +17,28 @@ import matplotlib.pyplot as plt
 
 # Esta función reordena la clases de la máscara para visualizar mejor los datos
 
-labels = ["persona", "vegetación", "cielo", "suelo", "fondo", "edificios", "vehiculo"]
+labels = ["vehículos", "persona", "edificios", "vegetación", "cielo", "suelo", "fondo"]
+
+# Esta función reordena las clases de la máscara para visualizar mejor los datos
+
+def reorder_visulization(img_label):
+    mask_fondo = np.copy(img_label[:, :, 0])
+    mask_vehic = np.copy(img_label[:, :, 1])
+    mask_suelo = np.copy(img_label[:, :, 2])
+    mask_person = np.copy(img_label[:, :, 3])
+    mask_edif = np.copy(img_label[:, :, 4])
+    mask_veget = np.copy(img_label[:, :, 5])
+    mask_cielo = np.copy(img_label[:, :, 6])
+
+    img_label[:, :, 0] = mask_vehic
+    img_label[:, :, 1] = mask_person
+    img_label[:, :, 2] = mask_edif
+    img_label[:, :, 3] = mask_veget
+    img_label[:, :, 4] = mask_cielo
+    img_label[:, :, 5] = mask_suelo
+    img_label[:, :, 6] = mask_fondo
+
+    return img_label
 
 #
 data_path = "cityscapes"
@@ -381,14 +402,15 @@ figsize = 5
 num_examples_to_generate = figsize*figsize
 fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Resultados segmentación')
-examples_index = np.random.choice(x_test.shape[0], figsize*2)
-examples = x_test[examples_index]
+examples_index = np.random.choice(x_train.shape[0], figsize*2)
+examples = x_train[examples_index]
 z_mean, z_log_var, z = encoder.predict(examples)
 predictions = decoder.predict(z)
 
 
 for i in range(figsize*2):
-    preds = np.argmax(predictions[i], axis=-1) / 6.
+    preds = reorder_visulization(predictions[i])
+    preds = np.argmax(preds, axis=-1) / 6.
     plt.subplot(4, figsize, i+1)
     plt.imshow(examples[i])
     plt.subplot(4, figsize, i + 1 + figsize*2)
@@ -434,7 +456,8 @@ ax.set_title(labels[6])
 plt.imshow(predictions[rnd][:, :, 6])
 
 # Generamos una imágen con todas las máscaras
-img_all_label = np.argmax(predictions[rnd], axis=-1) / 6.
+preds = reorder_visulization(predictions[rnd])
+img_all_label = np.argmax(preds, axis=-1) / 6.
 
 ax = plt.subplot(4, 3, 9)
 ax.set_title("mapa segmentación")
@@ -451,7 +474,8 @@ fig = plt.figure(figsize=(20, 10))
 fig.suptitle('Nuevos ejemplos generados')
 
 for i in range(num_examples_to_generate):
-    preds = np.argmax(predictions[i], axis=-1) / 6.
+    preds = reorder_visulization(predictions[i])
+    preds = np.argmax(preds, axis=-1) / 6.
     plt.subplot(figsize, figsize, i + 1)
     plt.imshow(preds)
 plt.colorbar()
