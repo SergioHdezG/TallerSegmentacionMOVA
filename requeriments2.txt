@@ -48,7 +48,7 @@ six==1.15.0
 tensorboard==2.5.0
 tensorboard-data-server==0.6.0
 tensorboard-plugin-wit==1.8.0
-tensorflow==2.4.1
+tensorflow==2.6.1
 tensorflow-datasets==4.2.0
 tensorflow-estimator==2.4.0
 tensorflow-examples===8cac91e8314ebf7d15231dff84f6cb2de36c7a27-
