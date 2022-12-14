@@ -98,7 +98,7 @@ import matplotlib.pyplot as plt
 # In[10]:
 
 
-get_ipython().system('unzip -u "datasets/ConferenceMinidataset.zip" -d "carpeta_destino"')
+# get_ipython().system('unzip -u "datasets/ConferenceMinidataset.zip" -d "carpeta_destino"')
 
 
 # Cargamos los nombres de los ficheros en memoria y ordenamos los datos para que coincidan las imágenes de entrada con las máscaras de segmentación.
