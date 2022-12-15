@@ -1,5 +1,5 @@
 
-# Taller de Segmentación de Imágenes para el MUVA 2021
+# Taller de Segmentación de Imágenes para el MUVA 2022
 
 Este es un taller de segmentación de imágenes mediante deep learning para el Máster Universitario en Visión Artificial (MUVA) de la URJC en el curso 2022/2023.
 
